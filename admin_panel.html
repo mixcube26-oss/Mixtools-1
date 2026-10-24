@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MixTools - Firebase Admin Panel & Device Manager</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Hind Siliguri -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Hind Siliguri"', 'Inter', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+          },
+          colors: {
+            primary: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Hind Siliguri', 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .glass-card {
+      background: rgba(18, 24, 38, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+    }
+    .phone-screen {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+  </style>
+</head>
+<body class="min-h-screen custom-scrollbar flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i class="fa-solid fa-toolbox text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            MixTools <span class="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full font-medium">Admin Panel</span>
+          </h1>
+          <p class="text-xs text-slate-400">Firebase Live App & Device Telemetry Manager</p>
+        </div>
+      </div>
+
+      <!-- Firebase Project Status -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center bg-slate-800/80 border border-slate-700/60 rounded-full px-3 py-1 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2"></span>
+          <span class="text-slate-300 font-mono">Project: <strong class="text-white">app-66a7d</strong></span>
+        </div>
+        <button id="refreshBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-rotate"></i>
+          <span>রিফ্রেশ</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- KPI Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      
+      <!-- Total Installs -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">মোট ফোন ইনস্টল (Installs)</p>
+            <h3 id="statTotalInstalls" class="text-3xl font-extrabold text-white mt-2">0</h3>
+            <p class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>রিয়েলটাইম ফায়ারবেস ডেটা</span>
+            </p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Devices (Last 24h) -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">সক্রিয় ডিভাইস (Active)</p>
+            <h3 id="statActiveDevices" class="text-3xl font-extrabold text-emerald-400 mt-2">0</h3>
+            <p class="text-xs text-slate-400 mt-1">সাম্প্রতিক সময়ে খোলা হয়েছে</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl">
+            <i class="fa-solid fa-wave-square"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unique Phone Models -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">আলাদা মডেল সংখ্যা</p>
+            <h3 id="statUniqueModels" class="text-3xl font-extrabold text-purple-400 mt-2">0</h3>
+            <p class="text-xs text-slate-400 mt-1">Samsung, Xiaomi, Pixel ইত্যাদি</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Broadcast Update Status -->
+      <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">লাইভ আপডেট অবস্থা</p>
+            <h3 id="statUpdateStatus" class="text-xl font-bold text-amber-400 mt-2">চেক করা হচ্ছে...</h3>
+            <p id="statUpdateType" class="text-xs text-slate-400 mt-1">ভার্সন কোড: -</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main Content Tabs -->
+    <div class="flex items-center gap-3 border-b border-slate-800 pb-3 mb-6">
+      <button id="tabUpdateSender" class="px-4 py-2 rounded-xl text-sm font-semibold transition bg-indigo-600 text-white flex items-center gap-2">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>ইন-অ্যাপ আপডেট সেন্ডার (Update Sender)</span>
+      </button>
+      <button id="tabDeviceList" class="px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2">
+        <i class="fa-solid fa-mobile-retro"></i>
+        <span>ইনস্টল হওয়া ফোন ও মডেল তালিকা (<span id="devicesBadgeCount">0</span>)</span>
+      </button>
+      <button id="tabRulesGuide" class="px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Firebase সিকিউরিটি রুলস</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: App Update Sender Card & Phone Mockup -->
+    <section id="sectionUpdateSender" class="block">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left: Update Configuration Form -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-bullhorn text-indigo-400"></i>
+                <span>অ্যাপে প্রিমিয়াম আপডেট কার্ড ব্রডকাস্ট করুন</span>
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">এখান থেকে নতুন ভার্সন ও পরিবর্তন লিখলে সাথে সাথে সব ইনস্টলকৃত ডিভাইসে সুন্দর পপআপ প্রদর্শিত হবে।</p>
+            </div>
+          </div>
+
+          <form id="updateForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">আপডেট টাইটেল (Title) *</label>
+              <input type="text" id="updateTitle" value="MixTools নতুন ভার্সন ২.১ আপডেট! 🚀" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">টার্গেট ভার্সন কোড (Version Code) *</label>
+                <input type="number" id="updateVersionCode" value="4" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+                <span class="text-[11px] text-slate-500 mt-0.5 block">বর্তমান অ্যাপ ভার্সন কোড: ৩</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">ভার্সন নাম (Version Name) *</label>
+                <input type="text" id="updateVersionName" value="2.2" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+                <span class="text-[11px] text-slate-500 mt-0.5 block">যেমন: 2.2, 3.0</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">ডাউনলোড বা গুগল প্লে স্টোর লিংক (Download URL) *</label>
+              <input type="url" id="updateDownloadUrl" value="https://play.google.com/store/apps/details?id=com.aistudio.mixtools.kxmpq" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">ফিচার ও পরিবর্তন বিবরণ (Release Notes / Changelog) *</label>
+              <textarea id="updateDescription" rows="4" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition leading-relaxed">• নতুন ডকুমেন্ট রাইটার ফন্ট সাপোর্ট যুক্ত হয়েছে
+• আল্ট্রা-ফাস্ট কারেন্সি ও ইউনিট কনভার্টার
+• বাগ ফিক্স এবং দ্রুততর অ্যাপ লোডিং
+• অ্যান্ড্রয়েড ১৪+ সারফেস অপ্টিমাইজেশন</textarea>
+              <span class="text-[11px] text-slate-500 mt-0.5 block">প্রতি লাইনে নতুন নতুন পয়েন্ট লিখুন</span>
+            </div>
+
+            <!-- Toggles -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-red-400"></i>
+                    <span>বাধ্যতামূলক আপডেট (Force Update)</span>
+                  </h4>
+                  <p class="text-xs text-slate-400">চালু থাকলে ব্যবহারকারী অ্যাপটি আপডেট না করা পর্যন্ত ব্যবহার করতে পারবে না।</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="updateForceToggle" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                </label>
+              </div>
+
+              <div class="border-t border-slate-800/80 pt-3 flex items-center justify-between">
+                <div>
+                  <h4 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-satellite-dish text-emerald-400"></i>
+                    <span>আপডেটটি সক্রিয় রাখুন (Broadcast Active)</span>
+                  </h4>
+                  <p class="text-xs text-slate-400">বন্ধ করলে কারো ফোনেই আর আপডেটের পপআপ আসবে না।</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="updateActiveToggle" checked class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3 pt-3">
+              <button type="submit" id="sendUpdateBtn" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>অ্যাপে আপডেট ব্রডকাস্ট করুন</span>
+              </button>
+              <button type="button" id="deactivateBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 px-4 rounded-xl border border-slate-700 transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-power-off text-rose-400"></i>
+                <span>নিষ্ক্রিয় করুন</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right: Real-time Android App Mockup Preview -->
+        <div class="lg:col-span-5 flex flex-col items-center">
+          <div class="text-center mb-3">
+            <h3 class="text-sm font-bold text-slate-300 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-eye text-indigo-400"></i>
+              <span>ফোনে যেমন দেখাবে (Live Preview)</span>
+            </h3>
+            <p class="text-xs text-slate-500">বামপাশের ফর্মে টাইপ করলে এখানে পরিবর্তন দেখুন</p>
+          </div>
+
+          <!-- Phone Chassis -->
+          <div class="w-[330px] rounded-[36px] p-3 bg-slate-900 border-4 border-slate-800 shadow-2xl relative">
+            <!-- Camera punchhole -->
+            <div class="w-4 h-4 bg-black rounded-full mx-auto mb-2 border border-slate-800"></div>
+
+            <!-- Phone Screen Simulation -->
+            <div class="w-full bg-slate-950 rounded-[26px] overflow-hidden phone-screen border border-slate-800/80 flex flex-col justify-center p-3 relative min-h-[480px]">
+              
+              <!-- Background dimming layer -->
+              <div class="absolute inset-0 bg-black/60 z-0"></div>
+
+              <!-- Premium Update Modal Card -->
+              <div class="relative z-10 w-full bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
+                <!-- Header Gradient -->
+                <div class="bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-5 text-center text-white relative">
+                  <div class="w-14 h-14 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-2 shadow-inner">
+                    <i class="fa-solid fa-rocket text-2xl text-white"></i>
+                  </div>
+                  <div class="flex items-center justify-center gap-2">
+                    <span id="previewVersionBadge" class="bg-white text-indigo-600 font-bold text-xs px-2.5 py-0.5 rounded-full shadow">v2.2</span>
+                    <span id="previewForceBadge" class="bg-red-500 text-white font-bold text-xs px-2.5 py-0.5 rounded-full hidden">বাধ্যতামূলক আপডেট</span>
+                  </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-4 text-left">
+                  <h4 id="previewTitle" class="text-base font-bold text-white mb-2 leading-snug">MixTools নতুন ভার্সন ২.১ আপডেট! 🚀</h4>
+                  <p class="text-[11px] font-semibold text-indigo-400 mb-1.5 uppercase tracking-wider">নতুন কী কী ফিচার এসেছে:</p>
+                  
+                  <div id="previewChangelog" class="text-xs text-slate-300 space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-1 mb-4">
+                    <!-- Dynamic bullets injected here -->
+                  </div>
+
+                  <div class="flex items-center gap-2 pt-1">
+                    <button id="previewLaterBtn" class="flex-1 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">পরে করব</button>
+                    <button class="flex-[1.4] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow">
+                      <i class="fa-solid fa-download"></i>
+                      <span>এখনই আপডেট</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: Device Models & Active Installs List -->
+    <section id="sectionDeviceList" class="hidden">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-mobile-retro text-emerald-400"></i>
+              <span>ইনস্টল হওয়া ফোনের মডেল ও ডিভাইস তালিকা</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">যেসব ফোনে MixTools চালু করা হয়েছে তাদের তথ্য এখানে রিয়েলটাইমে প্রদর্শিত হচ্ছে।</p>
+          </div>
+
+          <!-- Search & Filter -->
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+              <input type="text" id="deviceSearchInput" placeholder="মডেল বা ব্র্যান্ড দিয়ে খুঁজুন..." class="bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 w-56">
+            </div>
+            <button id="exportCsvBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 font-medium transition">
+              <i class="fa-solid fa-file-csv text-emerald-400"></i>
+              <span>Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Devices Table -->
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">ফোনের ব্র্যান্ড ও মডেল</th>
+                <th class="py-3 px-4">অ্যান্ড্রয়েড ভার্সন</th>
+                <th class="py-3 px-4">ইনস্টল্ড অ্যাপ ভার্সন</th>
+                <th class="py-3 px-4">প্রথম ইনস্টল</th>
+                <th class="py-3 px-4">সর্বশেষ সক্রিয় (Last Active)</th>
+                <th class="py-3 px-4 text-right">স্ট্যাটাস</th>
+              </tr>
+            </thead>
+            <tbody id="devicesTableBody" class="divide-y divide-slate-800/60 font-medium">
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500">
+                  <i class="fa-solid fa-spinner fa-spin text-xl text-indigo-400 mb-2"></i>
+                  <p>ডিভাইস ডেটা লোড হচ্ছে...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: Security Rules Guide -->
+    <section id="sectionRulesGuide" class="hidden">
+      <div class="glass-card rounded-2xl p-6">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-shield-halved text-indigo-400"></i>
+          <span>Firebase Firestore সিকিউরিটি রুলস (Security Rules)</span>
+        </h2>
+        <p class="text-xs text-slate-400 mb-5">Admin Panel থেকে ব্রডকাস্ট এবং ফোন থেকে ডিভাইস মডেল ডেটা সেভ করার জন্য Firebase Console-এ নিচের নিয়মগুলো নিশ্চিত করুন:</p>
+
+        <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400 leading-relaxed overflow-x-auto">
+          <button id="copyRulesBtn" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-white text-xs px-2.5 py-1 rounded border border-slate-700 flex items-center gap-1 transition">
+            <i class="fa-regular fa-copy"></i>
+            <span>কপি করুন</span>
+          </button>
+<pre id="rulesCode">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Devices Telemetry (Phone models & install counting)
+    match /devices/{deviceId} {
+      allow read, write: if true;
+    }
+
+    // 2. In-App Updates broadcast
+    match /app_updates/{updateId} {
+      allow read, write: if true;
+    }
+
+    // 3. Authenticated User Data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}</pre>
+        </div>
+
+        <div class="mt-6 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+          <h4 class="text-sm font-semibold text-white mb-2">কোথায় সেট করবেন?</h4>
+          <ol class="list-decimal list-inside text-xs text-slate-300 space-y-1.5">
+            <li>Firebase Console (<a href="https://console.firebase.google.com" target="_blank" class="text-indigo-400 underline">console.firebase.google.com</a>)-এ যান।</li>
+            <li>আপনার <strong>app-66a7d</strong> প্রজেক্টে ক্লিক করে বাম মেনুর <strong>Firestore Database</strong>-এ যান।</li>
+            <li>উপরে থাকা <strong>Rules</strong> ট্যাবে ক্লিক করে এই কোডটি পেস্ট করে <strong>Publish</strong> করে দিন।</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-24 opacity-0 transition-all duration-300">
+    <div id="toastIcon" class="text-emerald-400 text-lg"><i class="fa-solid fa-circle-check"></i></div>
+    <div id="toastMessage" class="text-xs font-semibold">মেসেজ</div>
+  </div>
+
+  <!-- Firebase SDK Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      onSnapshot, 
+      query, 
+      orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // User-provided Firebase Web configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyABQilL0wDjt58_4WOLgInELfLsGzfRtsk",
+      authDomain: "app-66a7d.firebaseapp.com",
+      projectId: "app-66a7d",
+      storageBucket: "app-66a7d.firebasestorage.app",
+      messagingSenderId: "26853327728",
+      appId: "1:26853327728:web:c8bfa16d67f9e6e91f85b5"
+    };
+
+    // Initialize Firebase & Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let allDevices = [];
+
+    // Toast Notification Helper
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+      
+      toastMessage.textContent = message;
+      toastIcon.innerHTML = isError 
+        ? '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i>' 
+        : '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+      
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3500);
+    }
+
+    // Tab Switching Logic
+    const tabUpdateSender = document.getElementById('tabUpdateSender');
+    const tabDeviceList = document.getElementById('tabDeviceList');
+    const tabRulesGuide = document.getElementById('tabRulesGuide');
+    const sectionUpdateSender = document.getElementById('sectionUpdateSender');
+    const sectionDeviceList = document.getElementById('sectionDeviceList');
+    const sectionRulesGuide = document.getElementById('sectionRulesGuide');
+
+    function switchTab(activeTab, activeSection) {
+      [tabUpdateSender, tabDeviceList, tabRulesGuide].forEach(tab => {
+        tab.className = 'px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2';
+      });
+      [sectionUpdateSender, sectionDeviceList, sectionRulesGuide].forEach(sec => sec.classList.add('hidden'));
+
+      activeTab.className = 'px-4 py-2 rounded-xl text-sm font-semibold transition bg-indigo-600 text-white flex items-center gap-2';
+      activeSection.classList.remove('hidden');
+    }
+
+    tabUpdateSender.addEventListener('click', () => switchTab(tabUpdateSender, sectionUpdateSender));
+    tabDeviceList.addEventListener('click', () => switchTab(tabDeviceList, sectionDeviceList));
+    tabRulesGuide.addEventListener('click', () => switchTab(tabRulesGuide, sectionRulesGuide));
+
+    // Live Phone Mockup Preview Bindings
+    const updateTitle = document.getElementById('updateTitle');
+    const updateVersionCode = document.getElementById('updateVersionCode');
+    const updateVersionName = document.getElementById('updateVersionName');
+    const updateDescription = document.getElementById('updateDescription');
+    const updateForceToggle = document.getElementById('updateForceToggle');
+    const updateActiveToggle = document.getElementById('updateActiveToggle');
+
+    const previewTitle = document.getElementById('previewTitle');
+    const previewVersionBadge = document.getElementById('previewVersionBadge');
+    const previewForceBadge = document.getElementById('previewForceBadge');
+    const previewChangelog = document.getElementById('previewChangelog');
+    const previewLaterBtn = document.getElementById('previewLaterBtn');
+
+    function updatePreview() {
+      previewTitle.textContent = updateTitle.value || 'নতুন আপডেট উপলব্ধ!';
+      previewVersionBadge.textContent = 'v' + (updateVersionName.value || '2.0');
+      
+      if (updateForceToggle.checked) {
+        previewForceBadge.classList.remove('hidden');
+        previewLaterBtn.classList.add('hidden');
+      } else {
+        previewForceBadge.classList.add('hidden');
+        previewLaterBtn.classList.remove('hidden');
+      }
+
+      // Format bullets
+      const lines = updateDescription.value.split('\n').filter(l => l.trim().length > 0);
+      previewChangelog.innerHTML = lines.map(line => `
+        <div class="flex items-start gap-1.5">
+          <i class="fa-solid fa-circle-check text-emerald-400 text-[10px] mt-0.5"></i>
+          <span>${line.replace(/^[•\-\s]+/, '')}</span>
+        </div>
+      `).join('');
+    }
+
+    [updateTitle, updateVersionCode, updateVersionName, updateDescription, updateForceToggle, updateActiveToggle].forEach(el => {
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    });
+    updatePreview();
+
+    // Listen to current live broadcast payload from Firestore
+    const updateDocRef = doc(db, 'app_updates', 'latest');
+    onSnapshot(updateDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        document.getElementById('statUpdateStatus').textContent = data.isActive ? 'সক্রিয় (Active)' : 'নিষ্ক্রিয় (Inactive)';
+        document.getElementById('statUpdateStatus').className = `text-xl font-bold mt-2 ${data.isActive ? 'text-emerald-400' : 'text-slate-400'}`;
+        document.getElementById('statUpdateType').textContent = `ভার্সন: v${data.targetVersionName || ''} (কোড: ${data.targetVersionCode || 0}) ${data.isForceUpdate ? '• ফোর্স আপডেট' : '• ঐচ্ছিক'}`;
+
+        // Populate fields if first load
+        if (!document.getElementById('updateTitle').dataset.userEdited) {
+          updateTitle.value = data.title || updateTitle.value;
+          updateVersionCode.value = data.targetVersionCode || updateVersionCode.value;
+          updateVersionName.value = data.targetVersionName || updateVersionName.value;
+          document.getElementById('updateDownloadUrl').value = data.downloadUrl || document.getElementById('updateDownloadUrl').value;
+          updateDescription.value = data.description || updateDescription.value;
+          updateForceToggle.checked = !!data.isForceUpdate;
+          updateActiveToggle.checked = !!data.isActive;
+          updatePreview();
+        }
+      } else {
+        document.getElementById('statUpdateStatus').textContent = 'কোনো আপডেট নেই';
+        document.getElementById('statUpdateStatus').className = 'text-xl font-bold text-slate-400 mt-2';
+      }
+    }, (error) => {
+      console.warn("Update listener note:", error);
+    });
+
+    // Handle Form Submit: Publish Update to Firestore
+    document.getElementById('updateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sendBtn = document.getElementById('sendUpdateBtn');
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>পাঠানো হচ্ছে...</span>';
+
+      try {
+        const payload = {
+          title: updateTitle.value.trim(),
+          targetVersionCode: parseInt(updateVersionCode.value, 10),
+          targetVersionName: updateVersionName.value.trim(),
+          downloadUrl: document.getElementById('updateDownloadUrl').value.trim(),
+          description: updateDescription.value.trim(),
+          isForceUpdate: updateForceToggle.checked,
+          isActive: updateActiveToggle.checked,
+          updatedAtMillis: Date.now()
+        };
+
+        await setDoc(updateDocRef, payload);
+        showToast('সফলভাবে অ্যাপে প্রিমিয়াম আপডেট কার্ড ব্রডকাস্ট করা হয়েছে!');
+      } catch (err) {
+        console.error(err);
+        showToast('আপডেট পাঠাতে ব্যর্থ: ' + err.message, true);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>অ্যাপে আপডেট ব্রডকাস্ট করুন</span>';
+      }
+    });
+
+    // Deactivate Update
+    document.getElementById('deactivateBtn').addEventListener('click', async () => {
+      if (!confirm('আপনি কি নিশ্চিত যে বর্তমান লাইভ আপডেটটি বন্ধ করতে চান?')) return;
+      try {
+        await setDoc(updateDocRef, { isActive: false, updatedAtMillis: Date.now() }, { merge: true });
+        updateActiveToggle.checked = false;
+        updatePreview();
+        showToast('আপডেট ব্রডকাস্ট বন্ধ করা হয়েছে।');
+      } catch (err) {
+        showToast('ব্যর্থ: ' + err.message, true);
+      }
+    });
+
+    // Realtime Devices Telemetry Listener
+    const devicesColRef = collection(db, 'devices');
+    onSnapshot(devicesColRef, (snapshot) => {
+      allDevices = [];
+      snapshot.forEach(docSnap => {
+        allDevices.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      renderDevicesTable(allDevices);
+      updateDeviceStats(allDevices);
+    }, (error) => {
+      console.warn("Devices telemetry note:", error);
+      document.getElementById('devicesTableBody').innerHTML = `
+        <tr>
+          <td colspan="6" class="py-6 text-center text-rose-400">
+            <i class="fa-solid fa-circle-exclamation text-lg mb-1"></i>
+            <p>ডেটা রিড করতে পারমিশন সমস্যা: Firebase Rules ট্যাবে গিয়ে Rules সেট করুন।</p>
+          </td>
+        </tr>
+      `;
+    });
+
+    function updateDeviceStats(devices) {
+      document.getElementById('statTotalInstalls').textContent = devices.length;
+      document.getElementById('devicesBadgeCount').textContent = devices.length;
+
+      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+      const activeCount = devices.filter(d => (d.lastActiveMillis || 0) > oneDayAgo).length;
+      document.getElementById('statActiveDevices').textContent = activeCount;
+
+      const uniqueModels = new Set(devices.map(d => (d.modelName || d.modelCode || 'Unknown'))).size;
+      document.getElementById('statUniqueModels').textContent = uniqueModels;
+    }
+
+    function renderDevicesTable(devices) {
+      const tbody = document.getElementById('devicesTableBody');
+      const query = document.getElementById('deviceSearchInput').value.toLowerCase().trim();
+
+      const filtered = devices.filter(d => {
+        if (!query) return true;
+        const text = `${d.modelName || ''} ${d.brand || ''} ${d.androidVersion || ''} ${d.appVersionName || ''}`.toLowerCase();
+        return text.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="py-8 text-center text-slate-500">
+              <i class="fa-solid fa-mobile-screen text-2xl text-slate-600 mb-2"></i>
+              <p>এখনো কোনো ডিভাইসের তথ্য পাওয়া যায়নি অথবা অনুসন্ধানের সাথে মেলেনি।</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Sort by last active descending
+      filtered.sort((a, b) => (b.lastActiveMillis || 0) - (a.lastActiveMillis || 0));
+
+      tbody.innerHTML = filtered.map(d => {
+        const lastActive = d.lastActiveMillis ? new Date(d.lastActiveMillis).toLocaleString('bn-BD') : 'অজ্ঞাত';
+        const firstInstall = d.firstInstalledMillis ? new Date(d.firstInstalledMillis).toLocaleDateString('bn-BD') : 'অজ্ঞাত';
+        const isRecent = (Date.now() - (d.lastActiveMillis || 0)) < (24 * 60 * 60 * 1000);
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <i class="fa-solid fa-mobile-screen"></i>
+                </div>
+                <div>
+                  <div class="font-bold text-white text-sm">${d.modelName || d.modelCode || 'অ্যান্ড্রয়েড ফোন'}</div>
+                  <div class="text-[11px] text-slate-500 font-mono">ব্র্যান্ড: ${d.brand || 'Android'}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3.5 px-4 text-slate-300">
+              <span class="inline-flex items-center gap-1 bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-[11px]">
+                <i class="fa-brands fa-android text-emerald-400"></i>
+                ${d.androidVersion || 'Android'}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 text-slate-300 font-mono text-xs">
+              <span class="text-indigo-400 font-bold">v${d.appVersionName || '1.0'}</span>
+              <span class="text-slate-500 text-[10px]">(${d.appVersionCode || 1})</span>
+            </td>
+            <td class="py-3.5 px-4 text-slate-400 text-xs">${firstInstall}</td>
+            <td class="py-3.5 px-4 text-slate-300 text-xs">${lastActive}</td>
+            <td class="py-3.5 px-4 text-right">
+              ${isRecent 
+                ? '<span class="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>সক্রিয়</span>'
+                : '<span class="inline-flex items-center gap-1.5 bg-slate-800 text-slate-500 border border-slate-700 px-2.5 py-0.5 rounded-full text-[11px]">অফলাইন</span>'
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('deviceSearchInput').addEventListener('input', () => {
+      renderDevicesTable(allDevices);
+    });
+
+    // Refresh Button
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      renderDevicesTable(allDevices);
+      updateDeviceStats(allDevices);
+      showToast('ডিভাইস তালিকা রিফ্রেশ করা হয়েছে');
+    });
+
+    // Copy Rules Button
+    document.getElementById('copyRulesBtn').addEventListener('click', () => {
+      const rules = document.getElementById('rulesCode').textContent;
+      navigator.clipboard.writeText(rules).then(() => {
+        showToast('সিকিউরিটি রুলস কপি করা হয়েছে!');
+      });
+    });
+
+    // Export CSV
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      if (allDevices.length === 0) {
+        showToast('এক্সপোর্ট করার মতো কোনো ডিভাইস পাওয়া যায়নি', true);
+        return;
+      }
+      const headers = ['Model Name', 'Brand', 'Android OS', 'App Version', 'First Installed', 'Last Active'];
+      const rows = allDevices.map(d => [
+        `"${d.modelName || ''}"`,
+        `"${d.brand || ''}"`,
+        `"${d.androidVersion || ''}"`,
+        `"${d.appVersionName || ''}"`,
+        `"${d.firstInstalledMillis ? new Date(d.firstInstalledMillis).toISOString() : ''}"`,
+        `"${d.lastActiveMillis ? new Date(d.lastActiveMillis).toISOString() : ''}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `mixtools_installed_devices_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV ফাইল ডাউনলোড হয়েছে!');
+    });
+  </script>
+</body>
+</html>

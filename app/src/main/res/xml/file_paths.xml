@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="cache_images" path="images/" />
+    <cache-path name="cache_documents" path="documents/" />
+    <cache-path name="cache_projects" path="projects/" />
+    <files-path name="files_projects" path="projects/" />
+</paths>

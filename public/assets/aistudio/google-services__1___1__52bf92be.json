@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "26853327728",
+    "project_id": "app-66a7d",
+    "storage_bucket": "app-66a7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:26853327728:android:98e2843b638f52231f85b5",
+        "android_client_info": {
+          "package_name": "com.aistudio.mixtools.kxmpq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPJjl-sPZeDFItw-AFOdMYEZbKCJlDHW0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

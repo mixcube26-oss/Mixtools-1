@@ -1,0 +1,6 @@
+{
+  "name": "MixTools",
+  "description": "All-in-one Android utility and productivity toolkit featuring text, calculator, phone manager, QR, and document tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

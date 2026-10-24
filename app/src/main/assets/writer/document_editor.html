@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <title>MixTools Document Writer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --workspace-bg: #E2E8F0;
+            --page-bg: #FFFFFF;
+            --page-border: rgba(15, 23, 42, 0.12);
+            --page-shadow: 0 4px 20px rgba(15, 23, 42, 0.10), 0 1px 4px rgba(15, 23, 42, 0.06);
+            --text-color: #0F172A;
+            --header-footer-color: #64748B;
+            --header-footer-border: #E2E8F0;
+            --margin-guide-color: rgba(99, 102, 241, 0.30);
+            --selection-bg: #B4D5FE;
+            --caret-color: #2563EB;
+            --table-border: #CBD5E1;
+            --table-th-bg: #F1F5F9;
+            --table-th-text: #1E293B;
+            --blockquote-bg: #F8FAFC;
+            --blockquote-border: #6366F1;
+            --placeholder-color: #94A3B8;
+
+            --page-width: 210mm;
+            --page-height: 297mm;
+            --margin-top: 20mm;
+            --margin-bottom: 20mm;
+            --margin-left: 20mm;
+            --margin-right: 20mm;
+            --zoom-scale: 1.0;
+        }
+
+        body.dark-theme {
+            --workspace-bg: #0B1120;
+            --page-bg: #FFFFFF;
+            --page-border: rgba(255, 255, 255, 0.20);
+            --page-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.5);
+            --text-color: #0F172A;
+            --header-footer-color: #475569;
+            --header-footer-border: #E2E8F0;
+            --margin-guide-color: rgba(99, 102, 241, 0.35);
+            --selection-bg: #93C5FD;
+            --caret-color: #2563EB;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--workspace-bg);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SolaimanLipi", "Kalpurush", "Amiri", "Noto Sans Bengali", "Noto Naskh Arabic", "Geeza Pro", "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        ::selection {
+            background-color: var(--selection-bg);
+            color: inherit;
+        }
+
+        /* Pan Mode Styles */
+        body.pan-mode {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body.pan-mode.is-dragging {
+            cursor: grabbing;
+        }
+
+        body.pan-mode .document-editor-area {
+            pointer-events: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+
+        .workspace-viewport {
+            min-width: 100%;
+            min-height: 100%;
+            padding: 20px 16px 140px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* Scaled container sizing wrapper prevents negative flex alignment */
+        .pages-wrapper {
+            position: relative;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .pages-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform-origin: top center;
+            will-change: transform;
+            transition: transform 0.12s ease-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .page-sheet {
+            width: var(--page-width);
+            min-height: var(--page-height);
+            background-color: var(--page-bg);
+            box-shadow: var(--page-shadow);
+            border: 1px solid var(--page-border);
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: var(--margin-top) var(--margin-right) var(--margin-bottom) var(--margin-left);
+            cursor: text;
+            box-sizing: border-box;
+        }
+
+        .show-margins .page-sheet::before {
+            content: '';
+            position: absolute;
+            top: var(--margin-top);
+            bottom: var(--margin-bottom);
+            left: var(--margin-left);
+            right: var(--margin-right);
+            border: 1px dashed var(--margin-guide-color);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .page-header-display {
+            position: absolute;
+            top: 8mm;
+            left: var(--margin-left);
+            right: var(--margin-right);
+            font-size: 9pt;
+            color: var(--header-footer-color);
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            user-select: none;
+            border-bottom: 0.5px solid var(--header-footer-border);
+            padding-bottom: 3px;
+        }
+
+        .page-footer-display {
+            position: absolute;
+            bottom: 8mm;
+            left: var(--margin-left);
+            right: var(--margin-right);
+            font-size: 9pt;
+            color: var(--header-footer-color);
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            user-select: none;
+            border-top: 0.5px solid var(--header-footer-border);
+            padding-top: 3px;
+        }
+
+        .document-editor-area {
+            flex: 1;
+            min-height: calc(var(--page-height) - var(--margin-top) - var(--margin-bottom));
+            outline: none;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: var(--text-color);
+            caret-color: var(--caret-color);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            z-index: 2;
+            position: relative;
+        }
+
+        .document-editor-area.is-empty::before,
+        .document-editor-area:empty::before {
+            content: attr(data-placeholder);
+            color: var(--placeholder-color);
+            pointer-events: none;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            font-style: italic;
+        }
+
+        /* Standard Typography & Multilingual Bidirectional Formatting */
+        h1, h2, h3, h4, p, li, blockquote {
+            margin-top: 0;
+            margin-bottom: 0.6em;
+            unicode-bidi: plaintext;
+        }
+
+        [dir="rtl"] {
+            text-align: right;
+            direction: rtl;
+        }
+
+        [dir="ltr"] {
+            text-align: left;
+            direction: ltr;
+        }
+
+        h1 { font-size: 24pt; font-weight: 700; color: #1E293B; line-height: 1.25; }
+        h2 { font-size: 18pt; font-weight: 600; color: #334155; line-height: 1.3; }
+        h3 { font-size: 14pt; font-weight: 600; color: #475569; line-height: 1.35; }
+        p { font-size: 11pt; }
+
+        blockquote {
+            border-left: 4px solid var(--blockquote-border);
+            padding: 8px 16px;
+            margin: 12px 0;
+            background-color: var(--blockquote-bg);
+            color: #475569;
+            font-style: italic;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Professional Tables */
+        table.doc-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            border: 1px solid var(--table-border);
+        }
+
+        table.doc-table th, table.doc-table td {
+            border: 1px solid var(--table-border);
+            padding: 8px 12px;
+            min-width: 40px;
+            min-height: 24px;
+            font-size: 10.5pt;
+        }
+
+        table.doc-table th {
+            background-color: var(--table-th-bg);
+            color: var(--table-th-text);
+            font-weight: 600;
+            text-align: left;
+        }
+
+        /* Images */
+        img.doc-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+            margin: 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* Page Break */
+        .page-break {
+            display: block;
+            page-break-before: always;
+            break-before: page;
+            height: 18px;
+            margin: 20px 0;
+            background: repeating-linear-gradient(45deg, #E2E8F0, #E2E8F0 10px, #F1F5F9 10px, #F1F5F9 20px);
+            border-top: 1px dashed #94A3B8;
+            border-bottom: 1px dashed #94A3B8;
+            position: relative;
+            user-select: none;
+            contenteditable: false;
+        }
+
+        .page-break::after {
+            content: '--- PAGE BREAK ---';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #64748B;
+            background-color: #FFFFFF;
+            padding: 0 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1.5px solid #CBD5E1;
+            margin: 16px 0;
+        }
+
+        /* Search Highlight */
+        mark.find-match {
+            background-color: #FDE047;
+            color: #000000;
+            border-radius: 2px;
+            padding: 1px 2px;
+        }
+
+        mark.find-match.active {
+            background-color: #F97316;
+            color: #FFFFFF;
+        }
+
+        @media print {
+            body {
+                background: none !important;
+                padding: 0;
+            }
+            .workspace-viewport {
+                padding: 0;
+            }
+            .pages-wrapper {
+                width: 100% !important;
+                height: auto !important;
+            }
+            .pages-container {
+                position: relative !important;
+                left: auto !important;
+                top: auto !important;
+                gap: 0;
+                transform: none !important;
+            }
+            .page-sheet {
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0;
+                page-break-after: always;
+                break-after: page;
+            }
+            .show-margins .page-sheet::before {
+                display: none;
+            }
+            .page-break {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="show-margins">
+    <div class="workspace-viewport" id="viewport">
+        <div class="pages-wrapper" id="pagesWrapper">
+            <div class="pages-container" id="pagesContainer">
+                <div class="page-sheet" id="sheet1">
+                    <div class="page-header-display">
+                        <span id="docHeaderTitle"></span>
+                        <span id="docHeaderDate"></span>
+                    </div>
+
+                    <div class="document-editor-area is-empty" id="editorArea" contenteditable="true" spellcheck="true" data-placeholder="Tap to write...">
+                        <p><br></p>
+                    </div>
+
+                    <div class="page-footer-display" style="justify-content: flex-end;">
+                        <span id="docPageNumberDisplay">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const editorArea = document.getElementById('editorArea');
+            const pagesContainer = document.getElementById('pagesContainer');
+            const pagesWrapper = document.getElementById('pagesWrapper');
+            const sheet1 = document.getElementById('sheet1');
+            const docHeaderTitle = document.getElementById('docHeaderTitle');
+            const docHeaderDate = document.getElementById('docHeaderDate');
+            const docPageNumberDisplay = document.getElementById('docPageNumberDisplay');
+
+            // Set current date in header
+            const today = new Date();
+            docHeaderDate.textContent = today.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+            // State
+            let currentZoom = 0.5; // Start with fitted zoom
+            let panX = 0;
+            let panY = 0;
+            let isPanMode = false;
+            let isDragging = false;
+            let startTouchX = 0;
+            let startTouchY = 0;
+            let startPanX = 0;
+            let startPanY = 0;
+            let initialPinchDistance = null;
+            let initialPinchZoom = 1.0;
+
+            let currentFormat = 'A4';
+            let isLandscape = false;
+            let debounceTimer = null;
+
+            const PAN_STEP = 60;
+
+            // Dimensions in mm
+            const FORMAT_DIMENSIONS = {
+                'A4': { width: 210, height: 297 },
+                'A5': { width: 148, height: 210 },
+                'LETTER': { width: 215.9, height: 279.4 },
+                'LEGAL': { width: 215.9, height: 355.6 },
+                'CUSTOM': { width: 210, height: 297 }
+            };
+
+            function getSheetDimensions() {
+                const sheetW = sheet1.offsetWidth || 794;
+                const sheetH = sheet1.offsetHeight || 1123;
+                return { width: sheetW, height: sheetH };
+            }
+
+            function clampPan() {
+                const dims = getSheetDimensions();
+                const scaledWidth = dims.width * currentZoom;
+                const scaledHeight = dims.height * currentZoom;
+
+                // Max allowable pan limits so page is never pushed off screen
+                const maxPanX = Math.max(80, scaledWidth * 0.4);
+                const maxPanY = Math.max(120, scaledHeight * 0.5);
+
+                panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+                panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+            }
+
+            function applyTransform(withTransition = true) {
+                if (!withTransition) {
+                    pagesContainer.style.transition = 'none';
+                } else {
+                    pagesContainer.style.transition = 'transform 0.12s ease-out';
+                }
+                pagesContainer.style.transform = 'translateX(-50%) translate(' + panX + 'px, ' + panY + 'px) scale(' + currentZoom + ')';
+                
+                const dims = getSheetDimensions();
+                const scaledW = Math.round(dims.width * currentZoom);
+                const scaledH = Math.round(dims.height * currentZoom);
+                pagesWrapper.style.width = scaledW + 'px';
+                pagesWrapper.style.height = scaledH + 'px';
+
+                if (!withTransition) {
+                    pagesContainer.offsetHeight; // trigger reflow
+                    pagesContainer.style.transition = 'transform 0.12s ease-out';
+                }
+                notifyViewport();
+            }
+
+            function notifyViewport() {
+                if (window.AndroidBridge && window.AndroidBridge.onViewportChanged) {
+                    try {
+                        window.AndroidBridge.onViewportChanged(currentZoom, panX, panY);
+                    } catch (e) {
+                        console.error('onViewportChanged bridge error', e);
+                    }
+                }
+            }
+
+            function notifyAndroidContent() {
+                const text = editorArea.innerText || '';
+                const html = editorArea.innerHTML || '';
+                
+                // Live stats calculation
+                const cleanText = text.trim();
+                const words = cleanText.length === 0 ? 0 : cleanText.split(/\s+/).filter(Boolean).length;
+                const chars = text.length;
+
+                // Estimate pages based on editor scrollHeight vs page height
+                const dims = getSheetDimensions();
+                const editorHeight = editorArea.scrollHeight || 1;
+                let pageCount = Math.max(1, Math.ceil(editorHeight / Math.max(100, (dims.height - 120))));
+                
+                // Account for manual page breaks
+                const manualBreaks = editorArea.querySelectorAll('.page-break').length;
+                pageCount += manualBreaks;
+
+                // Subtle empty placeholder state toggle (never saved into document HTML)
+                const hasRealContent = cleanText.length > 0 || !!editorArea.querySelector('img, table, hr, .page-break');
+                if (!hasRealContent) {
+                    editorArea.classList.add('is-empty');
+                } else {
+                    editorArea.classList.remove('is-empty');
+                }
+
+                docPageNumberDisplay.textContent = pageCount > 1 ? ('Page 1 of ' + pageCount) : '1';
+
+                if (window.AndroidBridge && window.AndroidBridge.onContentChanged) {
+                    try {
+                        window.AndroidBridge.onContentChanged(html, text, words, chars, pageCount);
+                    } catch (e) {
+                        console.error('onContentChanged bridge error', e);
+                    }
+                }
+            }
+
+            function notifyAndroidSelection() {
+                try {
+                    const isBold = document.queryCommandState('bold');
+                    const isItalic = document.queryCommandState('italic');
+                    const isUnderline = document.queryCommandState('underline');
+                    const isStrike = document.queryCommandState('strikeThrough');
+                    const isSubscript = document.queryCommandState('subscript');
+                    const isSuperscript = document.queryCommandState('superscript');
+                    const fontName = document.queryCommandValue('fontName') || '';
+                    const fontSize = document.queryCommandValue('fontSize') || '';
+                    const isAlignLeft = document.queryCommandState('justifyLeft');
+                    const isAlignCenter = document.queryCommandState('justifyCenter');
+                    const isAlignRight = document.queryCommandState('justifyRight');
+                    const isAlignJustify = document.queryCommandState('justifyFull');
+                    const isUnorderedList = document.queryCommandState('insertUnorderedList');
+                    const isOrderedList = document.queryCommandState('insertOrderedList');
+
+                    let align = 'left';
+                    if (isAlignCenter) align = 'center';
+                    else if (isAlignRight) align = 'right';
+                    else if (isAlignJustify) align = 'justify';
+
+                    const sel = window.getSelection();
+                    const hasSelection = !!(sel && !sel.isCollapsed && sel.toString().trim().length > 0);
+                    let textDirection = 'auto';
+                    if (sel && sel.rangeCount > 0) {
+                        let node = sel.anchorNode;
+                        while (node && node !== editorArea) {
+                            if (node.nodeType === 1 && node.getAttribute && node.getAttribute('dir')) {
+                                textDirection = node.getAttribute('dir');
+                                break;
+                            }
+                            node = node.parentNode;
+                        }
+                    }
+
+                    if (window.AndroidBridge && window.AndroidBridge.onSelectionChanged) {
+                        window.AndroidBridge.onSelectionChanged(
+                            isBold,
+                            isItalic,
+                            isUnderline,
+                            isStrike,
+                            isSubscript,
+                            isSuperscript,
+                            align,
+                            isUnorderedList,
+                            isOrderedList,
+                            fontName,
+                            fontSize,
+                            hasSelection,
+                            textDirection
+                        );
+                    }
+                } catch (e) {
+                    // Ignore selection errors during initial loading
+                }
+            }
+
+            function ensureCursorVisible() {
+                try {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        const range = sel.getRangeAt(0);
+                        const rect = range.getBoundingClientRect();
+                        if (rect && rect.top > 0) {
+                            const viewportHeight = window.innerHeight;
+                            if (rect.bottom > viewportHeight - 80) {
+                                window.scrollBy({ top: rect.bottom - (viewportHeight / 2), behavior: 'smooth' });
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // Input and selection listeners
+            editorArea.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    notifyAndroidContent();
+                }, 250);
+                ensureCursorVisible();
+            });
+
+            document.addEventListener('selectionchange', () => {
+                if (!isPanMode) {
+                    notifyAndroidSelection();
+                }
+            });
+
+            editorArea.addEventListener('focus', () => {
+                if (isPanMode) {
+                    editorArea.blur();
+                    return;
+                }
+                setTimeout(ensureCursorVisible, 300);
+            });
+
+            // Touch events for Pan Mode (Drag to pan & pinch to zoom)
+            window.addEventListener('touchstart', (e) => {
+                if (!isPanMode) return;
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    document.body.classList.add('is-dragging');
+                    startTouchX = e.touches[0].clientX;
+                    startTouchY = e.touches[0].clientY;
+                    startPanX = panX;
+                    startPanY = panY;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    initialPinchDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    initialPinchZoom = currentZoom;
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isPanMode) return;
+                e.preventDefault();
+                if (e.touches.length === 1 && isDragging) {
+                    const deltaX = e.touches[0].clientX - startTouchX;
+                    const deltaY = e.touches[0].clientY - startTouchY;
+                    panX = startPanX + deltaX;
+                    panY = startPanY + deltaY;
+                    clampPan();
+                    applyTransform(false);
+                } else if (e.touches.length === 2 && initialPinchDistance) {
+                    const dist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const factor = dist / initialPinchDistance;
+                    currentZoom = Math.min(2.5, Math.max(0.3, initialPinchZoom * factor));
+                    clampPan();
+                    applyTransform(false);
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchend', (e) => {
+                if (!isPanMode) return;
+                if (e.touches.length === 0) {
+                    isDragging = false;
+                    document.body.classList.remove('is-dragging');
+                    initialPinchDistance = null;
+                    clampPan();
+                    applyTransform(true);
+                }
+            });
+
+            // Public API for Android WebView Bridge
+            window.writerEngine = {
+                exec: function(command, value = null) {
+                    editorArea.focus();
+                    document.execCommand(command, false, value);
+                    notifyAndroidSelection();
+                    notifyAndroidContent();
+                },
+
+                setFontFamily: function(fontFamily) {
+                    this.exec('fontName', fontFamily);
+                },
+
+                setTextDirection: function(dir) {
+                    editorArea.focus();
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        let node = sel.anchorNode;
+                        while (node && node !== editorArea) {
+                            if (node.nodeType === 1 && (node.tagName === 'P' || node.tagName === 'DIV' || node.tagName.startsWith('H') || node.tagName === 'LI' || node.tagName === 'BLOCKQUOTE')) {
+                                if (dir === 'auto') {
+                                    node.removeAttribute('dir');
+                                } else {
+                                    node.setAttribute('dir', dir);
+                                }
+                                break;
+                            }
+                            node = node.parentNode;
+                        }
+                    }
+                    notifyAndroidSelection();
+                    notifyAndroidContent();
+                },
+
+                setFontSizePt: function(pt) {
+                    editorArea.focus();
+                    const sel = window.getSelection();
+                    if (!sel.isCollapsed && sel.rangeCount > 0) {
+                        const range = sel.getRangeAt(0);
+                        const span = document.createElement('span');
+                        span.style.fontSize = pt + 'pt';
+                        try {
+                            range.surroundContents(span);
+                        } catch (e) {
+                            document.execCommand('fontSize', false, '3');
+                        }
+                    } else {
+                        document.execCommand('fontSize', false, '3');
+                    }
+                    notifyAndroidSelection();
+                    notifyAndroidContent();
+                },
+
+                setTextColor: function(hex) {
+                    this.exec('foreColor', hex);
+                },
+
+                setHighlightColor: function(hex) {
+                    this.exec('hiliteColor', hex);
+                },
+
+                setHeading: function(tag) {
+                    this.exec('formatBlock', '<' + tag + '>');
+                },
+
+                setLineSpacing: function(spacing) {
+                    editorArea.focus();
+                    const sel = window.getSelection();
+                    if (sel.rangeCount > 0) {
+                        let node = sel.anchorNode;
+                        while (node && node !== editorArea) {
+                            if (node.nodeType === 1 && (node.tagName === 'P' || node.tagName === 'DIV' || node.tagName.startsWith('H'))) {
+                                node.style.lineHeight = spacing;
+                                break;
+                            }
+                            node = node.parentNode;
+                        }
+                    }
+                    notifyAndroidContent();
+                },
+
+                insertTable: function(rows, cols) {
+                    editorArea.focus();
+                    let html = '<table class="doc-table"><thead><tr>';
+                    for (let c = 1; c <= cols; c++) {
+                        html += '<th>Header ' + c + '</th>';
+                    }
+                    html += '</tr></thead><tbody>';
+                    for (let r = 1; r <= rows; r++) {
+                        html += '<tr>';
+                        for (let c = 1; c <= cols; c++) {
+                            html += '<td>Cell ' + r + '.' + c + '</td>';
+                        }
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table><p><br></p>';
+                    document.execCommand('insertHTML', false, html);
+                    notifyAndroidContent();
+                },
+
+                insertImage: function(base64DataUrl) {
+                    editorArea.focus();
+                    const html = '<img class="doc-image" src="' + base64DataUrl + '" alt="Inserted Image"/><p><br></p>';
+                    document.execCommand('insertHTML', false, html);
+                    notifyAndroidContent();
+                },
+
+                insertPageBreak: function() {
+                    editorArea.focus();
+                    const html = '<div class="page-break" contenteditable="false"></div><p><br></p>';
+                    document.execCommand('insertHTML', false, html);
+                    notifyAndroidContent();
+                },
+
+                insertHorizontalRule: function() {
+                    this.exec('insertHorizontalRule');
+                },
+
+                insertDateTime: function() {
+                    const now = new Date();
+                    const str = now.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                    document.execCommand('insertText', false, str);
+                    notifyAndroidContent();
+                },
+
+                clearFormatting: function() {
+                    this.exec('removeFormat');
+                },
+
+                setPageLayout: function(format, landscape, topMm, bottomMm, leftMm, rightMm, paperColor) {
+                    currentFormat = (format || 'A4').toUpperCase();
+                    isLandscape = !!landscape;
+
+                    const dim = FORMAT_DIMENSIONS[currentFormat] || FORMAT_DIMENSIONS['A4'];
+                    const w = isLandscape ? dim.height : dim.width;
+                    const h = isLandscape ? dim.width : dim.height;
+
+                    const root = document.documentElement;
+                    root.style.setProperty('--page-width', w + 'mm');
+                    root.style.setProperty('--page-height', h + 'mm');
+                    root.style.setProperty('--margin-top', (topMm || 20) + 'mm');
+                    root.style.setProperty('--margin-bottom', (bottomMm || 20) + 'mm');
+                    root.style.setProperty('--margin-left', (leftMm || 20) + 'mm');
+                    root.style.setProperty('--margin-right', (rightMm || 20) + 'mm');
+
+                    if (paperColor) {
+                        root.style.setProperty('--page-bg', paperColor);
+                    }
+
+                    // Re-calculate transform for new sheet dimensions
+                    setTimeout(() => {
+                        this.fitWidth();
+                        notifyAndroidContent();
+                    }, 20);
+                },
+
+                // Viewport Pan and Zoom Controls
+                setPanMode: function(enabled) {
+                    isPanMode = !!enabled;
+                    if (isPanMode) {
+                        document.body.classList.add('pan-mode');
+                        if (document.activeElement) document.activeElement.blur();
+                    } else {
+                        document.body.classList.remove('pan-mode');
+                        document.body.classList.remove('is-dragging');
+                    }
+                },
+
+                zoomIn: function() {
+                    currentZoom = Math.min(2.5, currentZoom + 0.15);
+                    clampPan();
+                    applyTransform();
+                },
+
+                zoomOut: function() {
+                    currentZoom = Math.max(0.3, currentZoom - 0.15);
+                    clampPan();
+                    applyTransform();
+                },
+
+                setZoom: function(scale) {
+                    currentZoom = Math.min(2.5, Math.max(0.3, scale));
+                    clampPan();
+                    applyTransform();
+                },
+
+                fitWidth: function() {
+                    const padding = 32;
+                    const viewportW = window.innerWidth || document.documentElement.clientWidth || 390;
+                    const availableWidth = Math.max(260, viewportW - padding);
+                    const dims = getSheetDimensions();
+                    if (dims.width > 0 && availableWidth > 0) {
+                        currentZoom = Math.max(0.3, Math.min(2.0, availableWidth / dims.width));
+                    }
+                    panX = 0;
+                    panY = 0;
+                    applyTransform(true);
+                    window.scrollTo(0, 0);
+                },
+
+                fitPage: function() {
+                    const paddingW = 32;
+                    const paddingH = 80;
+                    const viewportW = window.innerWidth || document.documentElement.clientWidth || 390;
+                    const viewportH = window.innerHeight || document.documentElement.clientHeight || 600;
+                    const availableWidth = Math.max(260, viewportW - paddingW);
+                    const availableHeight = Math.max(300, viewportH - paddingH);
+                    const dims = getSheetDimensions();
+                    if (dims.width > 0 && dims.height > 0) {
+                        const zoomW = availableWidth / dims.width;
+                        const zoomH = availableHeight / dims.height;
+                        currentZoom = Math.max(0.25, Math.min(1.8, Math.min(zoomW, zoomH)));
+                    }
+                    panX = 0;
+                    panY = 0;
+                    applyTransform(true);
+                    window.scrollTo(0, 0);
+                },
+
+                resetCenter: function() {
+                    currentZoom = 1.0;
+                    panX = 0;
+                    panY = 0;
+                    applyTransform(true);
+                    window.scrollTo(0, 0);
+                },
+
+                panBy: function(direction, amount) {
+                    const step = amount || PAN_STEP;
+                    switch (direction) {
+                        case 'up':
+                            panY -= step;
+                            break;
+                        case 'down':
+                            panY += step;
+                            break;
+                        case 'left':
+                            panX -= step;
+                            break;
+                        case 'right':
+                            panX += step;
+                            break;
+                    }
+                    clampPan();
+                    applyTransform();
+                },
+
+                setDocTitle: function(title) {
+                    docHeaderTitle.textContent = title || '';
+                },
+
+                toggleMargins: function(show) {
+                    if (show) {
+                        document.body.classList.add('show-margins');
+                    } else {
+                        document.body.classList.remove('show-margins');
+                    }
+                },
+
+                setDarkTheme: function(isDark) {
+                    if (isDark) {
+                        document.body.classList.add('dark-theme');
+                    } else {
+                        document.body.classList.remove('dark-theme');
+                    }
+                },
+
+                findAndReplace: function(findText, replaceText, replaceAll) {
+                    if (!findText) return 0;
+                    editorArea.focus();
+                    let content = editorArea.innerHTML;
+                    if (!content) return 0;
+
+                    const regex = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), replaceAll ? 'gi' : 'i');
+                    const matches = content.match(regex);
+                    const count = matches ? matches.length : 0;
+
+                    if (count > 0 && replaceText !== null && replaceText !== undefined) {
+                        editorArea.innerHTML = content.replace(regex, replaceText);
+                        notifyAndroidContent();
+                    }
+                    return count;
+                },
+
+                setContent: function(html) {
+                    editorArea.innerHTML = html || '<p><br></p>';
+                    notifyAndroidContent();
+                },
+
+                setContentBase64: function(base64Str) {
+                    try {
+                        const binaryStr = atob(base64Str);
+                        const bytes = new Uint8Array(binaryStr.length);
+                        for (let i = 0; i < binaryStr.length; i++) {
+                            bytes[i] = binaryStr.charCodeAt(i);
+                        }
+                        const decodedHtml = new TextDecoder('utf-8').decode(bytes);
+                        this.setContent(decodedHtml);
+                    } catch (e) {
+                        console.error('setContentBase64 error', e);
+                    }
+                },
+
+                getContent: function() {
+                    return editorArea.innerHTML;
+                },
+
+                getPlainText: function() {
+                    return editorArea.innerText;
+                }
+            };
+
+            // Initial auto-fit once DOM is ready
+            window.addEventListener('DOMContentLoaded', () => {
+                applyTransform(false);
+                setTimeout(() => {
+                    window.writerEngine.fitWidth();
+                    notifyAndroidContent();
+                }, 50);
+            });
+
+            window.addEventListener('resize', () => {
+                if (!isPanMode && panX === 0 && panY === 0) {
+                    const dims = getSheetDimensions();
+                    pagesWrapper.style.width = Math.round(dims.width * currentZoom) + 'px';
+                    pagesWrapper.style.height = Math.round(dims.height * currentZoom) + 'px';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
